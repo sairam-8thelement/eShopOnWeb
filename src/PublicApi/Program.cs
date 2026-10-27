@@ -19,7 +19,11 @@ var builder = WebApplication.CreateBuilder(args);
 // Add service defaults & Aspire components.
 builder.AddAspireServiceDefaults();
 
-builder.Services.AddFastEndpoints();
+builder.Services.AddFastEndpoints(o =>
+{
+    o.Assemblies = [typeof(Program).Assembly];
+    o.DisableAutoDiscovery = true;
+});
 
 // Use to force loading of appsettings.json of test project
 builder.Configuration.AddConfigurationFile("appsettings.test.json");
