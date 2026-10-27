@@ -57,6 +57,13 @@ try
 
         if (TryParseTestSummary(testResult.StdOut + Environment.NewLine + testResult.StdErr, out int passedTests, out _, out int totalTests))
         {
+            if (totalTests == 0)
+            {
+                Console.WriteLine($"  {projectName}... completed in {FormatElapsed(testResult.Elapsed)}: ❌ discovered 0 tests");
+                WriteFailureDetails(testResult);
+                return 1;
+            }
+
             Console.WriteLine($"  {projectName}... completed in {FormatElapsed(testResult.Elapsed)}: ✅ {passedTests}/{totalTests} passing");
         }
         else

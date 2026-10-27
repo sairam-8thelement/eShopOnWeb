@@ -32,8 +32,45 @@ jobs:
       # See https://josh-ops.com/posts/github-code-coverage/
       # Add coverlet.collector nuget package to test project - 'dotnet add <TestProject.cspoj> package coverlet
     - name: Test with dotnet
-      run: dotnet test ${{ env.SOLUTION_FILE }} --no-restore --verbosity normal --collect:"XPlat Code Coverage" --logger trx --results-directory coverage
-      
+      shell: bash
+      run: |
+        failed=0
+        for proj in tests/*/*Tests.csproj; do
+          name=$(basename "$proj" .csproj)
+          echo "Running tests for $name ($proj)..."
+
+          if ! dotnet test "$proj" --no-restore --verbosity normal --collect:"XPlat Code Coverage" --logger "trx;LogFileName=$name.trx" --results-directory coverage; then
+            echo "::error::$name: dotnet test failed"
+            failed=1
+          fi
+
+          trx="coverage/$name.trx"
+          if [ ! -f "$trx" ]; then
+            echo "::error::$name: no trx result file found at $trx"
+            failed=1
+            continue
+          fi
+
+          total=$(grep -oP '<Counters[^>]*\btotal="\K[0-9]+' "$trx" | head -n1 || true)
+
+          if [ -z "$total" ]; then
+            echo "::error::$name: could not determine discovered test count from $trx"
+            failed=1
+            continue
+          fi
+
+          echo "$name: $total tests discovered"
+
+          if [ "$total" -eq 0 ]; then
+            echo "::error::$name: discovered 0 tests"
+            failed=1
+          fi
+        done
+
+        if [ "$failed" -ne 0 ]; then
+          exit 1
+        fi
+
     - name: Copy Coverage To Predictable Location
       run: find coverage -type f -name coverage.cobertura.xml -exec cp -p {} coverage/coverage.cobertura.xml \;
       
